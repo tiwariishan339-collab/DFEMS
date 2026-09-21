@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Cases - DFEMS{% endblock %}
+{% block content %}
+<h3>Cases</h3>
+
+<div class="card p-3 mb-4">
+    <h5>Create New Case</h5>
+    <form method="POST">
+        <div class="mb-2">
+            <label class="form-label">Title</label>
+            <input type="text" name="title" class="form-control" required>
+        </div>
+        <div class="mb-2">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-control"></textarea>
+        </div>
+        <button type="submit" class="btn btn-dark">Create Case</button>
+    </form>
+</div>
+
+<table class="table table-striped">
+    <thead><tr><th>ID</th><th>Title</th><th>Created By</th><th>Created At</th><th></th></tr></thead>
+    <tbody>
+    {% for c in cases %}
+        <tr>
+            <td>{{ c.id }}</td>
+            <td>{{ c.title }}</td>
+            <td>{{ c.created_by }}</td>
+            <td>{{ c.created_at }}</td>
+            <td>
+                <a href="{{ url_for('case_detail', case_id=c.id) }}" class="btn btn-sm btn-outline-dark">View</a>
+                <a href="{{ url_for('case_report', case_id=c.id) }}" class="btn btn-sm btn-outline-secondary">Report</a>
+            </td>
+        </tr>
+    {% else %}
+        <tr><td colspan="5">No cases yet.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

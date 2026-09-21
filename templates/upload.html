@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Upload Evidence - DFEMS{% endblock %}
+{% block content %}
+<h3>Upload Evidence</h3>
+<div class="card p-3" style="max-width: 500px;">
+    <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label class="form-label">Case</label>
+            <select name="case_id" class="form-select" required>
+                {% for c in cases %}
+                    <option value="{{ c.id }}">{{ c.title }}</option>
+                {% endfor %}
+            </select>
+            {% if not cases %}
+                <div class="form-text text-danger">No cases yet — <a href="{{ url_for('cases') }}">create one first</a>.</div>
+            {% endif %}
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Evidence File</label>
+            <input type="file" name="evidence" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-dark" {% if not cases %}disabled{% endif %}>Upload & Generate Hash</button>
+    </form>
+</div>
+{% endblock %}

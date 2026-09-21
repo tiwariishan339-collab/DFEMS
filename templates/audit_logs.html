@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Audit Logs - DFEMS{% endblock %}
+{% block content %}
+<h3>Audit Logs (Admin)</h3>
+<table class="table table-striped">
+    <thead><tr><th>Timestamp</th><th>User</th><th>Action</th></tr></thead>
+    <tbody>
+    {% for log in logs %}
+        <tr><td>{{ log.timestamp }}</td><td>{{ log.username }}</td><td>{{ log.action }}</td></tr>
+    {% else %}
+        <tr><td colspan="3">No logs yet.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

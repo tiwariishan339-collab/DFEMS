@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Evidence - DFEMS{% endblock %}
+{% block content %}
+<h3>{{ ev.original_filename }}</h3>
+
+<div class="card p-3 mb-3">
+    <p><b>Stored SHA-256 Hash:</b><br><code>{{ ev.file_hash }}</code></p>
+    <p><b>Uploaded By:</b> {{ ev.uploader }} &nbsp; | &nbsp; <b>At:</b> {{ ev.uploaded_at }}</p>
+
+    {% if verify_result == 'intact' %}
+        <div class="alert alert-success mb-0">✅ Evidence Intact — hash matches, no tampering detected.</div>
+    {% elif verify_result == 'tampered' %}
+        <div class="alert alert-danger mb-0">❌ Evidence Modified — current hash does NOT match stored hash!</div>
+    {% elif verify_result == 'missing' %}
+        <div class="alert alert-warning mb-0">⚠️ File missing from storage.</div>
+    {% endif %}
+</div>
+
+<a href="{{ url_for('verify_evidence', evidence_id=ev.id) }}" class="btn btn-dark">🔍 Verify Integrity</a>
+<a href="{{ url_for('download_evidence', evidence_id=ev.id) }}" class="btn btn-outline-dark">⬇ Download</a>
+
+<h5 class="mt-4">Chain of Custody</h5>
+<table class="table table-striped">
+    <thead><tr><th>Timestamp</th><th>User</th><th>Action</th></tr></thead>
+    <tbody>
+    {% for c in custody %}
+        <tr><td>{{ c.timestamp }}</td><td>{{ c.username }}</td><td>{{ c.action }}</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Sign Up - DFEMS{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-4">
+        <h3 class="mb-3 text-center">Create Account</h3>
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Username</label>
+                <input type="text" name="username" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Role</label>
+                <select name="role" class="form-select">
+                    <option value="investigator">Investigator</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-dark w-100">Sign Up</button>
+        </form>
+        <p class="text-center mt-3">Already have an account? <a href="{{ url_for('login') }}">Login</a></p>
+    </div>
+</div>
+{% endblock %}

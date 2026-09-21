@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ case.title }} - DFEMS{% endblock %}
+{% block content %}
+<h3>{{ case.title }}</h3>
+<p>{{ case.description }}</p>
+<p class="text-muted">Created by {{ case.created_by }} on {{ case.created_at }}</p>
+<a href="{{ url_for('case_report', case_id=case.id) }}" class="btn btn-outline-secondary mb-3">📄 Download PDF Report</a>
+
+<h5>Evidence in this case</h5>
+<table class="table table-striped">
+    <thead><tr><th>File</th><th>SHA-256 Hash</th><th>Uploader</th><th>Uploaded At</th><th></th></tr></thead>
+    <tbody>
+    {% for ev in evidence_list %}
+        <tr>
+            <td>{{ ev.original_filename }}</td>
+            <td><code>{{ ev.file_hash[:16] }}...</code></td>
+            <td>{{ ev.uploader }}</td>
+            <td>{{ ev.uploaded_at }}</td>
+            <td><a href="{{ url_for('evidence_detail', evidence_id=ev.id) }}" class="btn btn-sm btn-outline-dark">View</a></td>
+        </tr>
+    {% else %}
+        <tr><td colspan="5">No evidence uploaded for this case yet.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Search - DFEMS{% endblock %}
+{% block content %}
+<h3>Search Evidence</h3>
+<form method="GET" class="d-flex mb-4" style="max-width: 500px;">
+    <input type="text" name="q" value="{{ query }}" class="form-control me-2" placeholder="Filename, uploader, or case title...">
+    <button type="submit" class="btn btn-dark">Search</button>
+</form>
+
+{% if query %}
+<table class="table table-striped">
+    <thead><tr><th>File</th><th>Case</th><th>Uploader</th><th>Uploaded At</th><th></th></tr></thead>
+    <tbody>
+    {% for ev in results %}
+        <tr>
+            <td>{{ ev.original_filename }}</td>
+            <td>{{ ev.case_title }}</td>
+            <td>{{ ev.uploader }}</td>
+            <td>{{ ev.uploaded_at }}</td>
+            <td><a href="{{ url_for('evidence_detail', evidence_id=ev.id) }}" class="btn btn-sm btn-outline-dark">View</a></td>
+        </tr>
+    {% else %}
+        <tr><td colspan="5">No results found.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}
