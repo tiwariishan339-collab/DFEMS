@@ -3,7 +3,7 @@
 {% block content %}
 <h3>{{ case.title }}</h3>
 <p>{{ case.description }}</p>
-<p class="text-muted">Created by {{ case.created_by }} on {{ case.created_at }}</p>
+<p class="CREATED-BY">Created by {{ case.created_by }} on {{ case.created_at }}</p>
 <a href="{{ url_for('case_report', case_id=case.id) }}" class="btn btn-outline-secondary mb-3">📄 Download PDF Report</a>
 
 <h5>Evidence in this case</h5>
