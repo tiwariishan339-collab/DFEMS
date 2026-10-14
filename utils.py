@@ -17,6 +17,20 @@ def generate_file_hash(filepath):
     return sha256.hexdigest()
 
 
+def format_file_size(size_bytes):
+    """Convert bytes into human-readable formatted string (KB, MB, etc.)."""
+    if size_bytes is None or size_bytes < 0:
+        return "0 B"
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.2f} KB"
+    elif size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.2f} MB"
+    return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+
+
+
 def generate_report_pdf(case, evidence_with_logs, base_dir):
     """
     Build a PDF report for a case: case info, each evidence item, its hash,

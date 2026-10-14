@@ -18,7 +18,7 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 from bson.errors import InvalidId
 
-from utils import generate_file_hash, generate_report_pdf
+from utils import generate_file_hash, generate_report_pdf, format_file_size
 
 # ---------- Config ----------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -31,6 +31,7 @@ MONGO_DB_NAME = os.environ.get("MONGO_DB_NAME", "dfems")
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "dfems-college-project-secret-key"  # change for real deployment
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.jinja_env.filters["format_file_size"] = format_file_size
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -175,12 +176,31 @@ def logout():
 def dashboard():
     total_cases = cases_col.count_documents({})
     total_evidence = evidence_col.count_documents({})
+    total_custody = custody_col.count_documents({})
+    total_audits = audit_col.count_documents({})
     recent_activity = list(audit_col.find().sort("_id", -1).limit(8))
+
+    recent_cases = serialize_many(cases_col.find().sort("_id", -1).limit(4))
+    for c in recent_cases:
+        c["evidence_count"] = evidence_col.count_documents({"case_id": c["_id"]})
+
+    recent_evidence = serialize_many(evidence_col.find().sort("_id", -1).limit(5))
+    for ev in recent_evidence:
+        c = cases_col.find_one({"_id": ev.get("case_id")})
+        ev["case_title"] = c["title"] if c else "-"
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], ev.get("stored_filename", ""))
+        ev["file_exists"] = os.path.exists(filepath)
+        ev["file_size_bytes"] = os.path.getsize(filepath) if ev["file_exists"] else 0
+
     return render_template(
         "dashboard.html",
         total_cases=total_cases,
         total_evidence=total_evidence,
+        total_custody=total_custody,
+        total_audits=total_audits,
         recent_activity=recent_activity,
+        recent_cases=recent_cases,
+        recent_evidence=recent_evidence,
     )
 
 
@@ -189,8 +209,12 @@ def dashboard():
 @login_required
 def cases():
     if request.method == "POST":
-        title = request.form["title"].strip()
+        title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
+        if not title:
+            flash("Case title cannot be empty.", "danger")
+            return redirect(url_for("cases"))
+
         cases_col.insert_one({
             "title": title,
             "description": description,
@@ -198,9 +222,12 @@ def cases():
             "created_at": now_str(),
         })
         log_audit(current_user.username, f"Created case '{title}'")
-        flash("Case created.", "success")
+        flash(f"Case '{title}' created successfully.", "success")
+        return redirect(url_for("cases"))
 
     all_cases = serialize_many(cases_col.find().sort("_id", -1))
+    for c in all_cases:
+        c["evidence_count"] = evidence_col.count_documents({"case_id": c["_id"]})
     return render_template("cases.html", cases=all_cases)
 
 
@@ -212,6 +239,10 @@ def case_detail(case_id):
     if not case:
         abort(404)
     evidence_list = serialize_many(evidence_col.find({"case_id": oid}).sort("_id", -1))
+    for ev in evidence_list:
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], ev.get("stored_filename", ""))
+        ev["file_exists"] = os.path.exists(filepath)
+        ev["file_size_bytes"] = os.path.getsize(filepath) if ev["file_exists"] else 0
     return render_template("case_detail.html", case=case, evidence_list=evidence_list)
 
 
@@ -220,39 +251,50 @@ def case_detail(case_id):
 @login_required
 def upload():
     all_cases = serialize_many(cases_col.find().sort("_id", -1))
+    selected_case_id = request.args.get("case_id", "")
 
     if request.method == "POST":
-        case_id = request.form["case_id"]
+        case_id = request.form.get("case_id")
         file = request.files.get("evidence")
 
-        if not file or file.filename == "":
-            flash("Please choose a file.", "danger")
+        if not case_id:
+            flash("Please select a target case.", "danger")
             return redirect(url_for("upload"))
 
+        if not file or file.filename == "":
+            flash("Please choose a valid evidence file.", "danger")
+            return redirect(url_for("upload", case_id=case_id))
+
         original_name = secure_filename(file.filename)
+        if not original_name:
+            original_name = "evidence_file"
+
         stored_name = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{original_name}"
         filepath = os.path.join(app.config["UPLOAD_FOLDER"], stored_name)
         file.save(filepath)
 
+        file_size = os.path.getsize(filepath)
         file_hash = generate_file_hash(filepath)
+        case_oid = oid_or_404(case_id)
 
         result = evidence_col.insert_one({
-            "case_id": oid_or_404(case_id),
+            "case_id": case_oid,
             "stored_filename": stored_name,
             "original_filename": original_name,
+            "file_size": file_size,
             "file_hash": file_hash,
             "uploader": current_user.username,
             "uploaded_at": now_str(),
         })
         evidence_id = result.inserted_id
 
-        log_custody(evidence_id, current_user.username, "Evidence uploaded")
-        log_audit(current_user.username, f"Uploaded evidence '{original_name}'")
+        log_custody(evidence_id, current_user.username, "Evidence registered & uploaded")
+        log_audit(current_user.username, f"Uploaded evidence '{original_name}' (SHA-256: {file_hash[:12]}...)")
 
-        flash(f"Uploaded. SHA-256: {file_hash}", "success")
+        flash(f"Evidence '{original_name}' registered. SHA-256: {file_hash}", "success")
         return redirect(url_for("evidence_detail", evidence_id=str(evidence_id)))
 
-    return render_template("upload.html", cases=all_cases)
+    return render_template("upload.html", cases=all_cases, selected_case_id=selected_case_id)
 
 
 # ---------- Evidence detail + verify ----------
@@ -263,9 +305,13 @@ def evidence_detail(evidence_id):
     ev = serialize(evidence_col.find_one({"_id": oid}))
     if not ev:
         abort(404)
+    case = serialize(cases_col.find_one({"_id": ev.get("case_id")}))
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], ev.get("stored_filename", ""))
+    ev["file_exists"] = os.path.exists(filepath)
+    ev["file_size_bytes"] = os.path.getsize(filepath) if ev["file_exists"] else 0
     custody = serialize_many(custody_col.find({"evidence_id": oid}).sort("_id", 1))
-    log_custody(oid, current_user.username, "Evidence viewed")
-    return render_template("evidence_detail.html", ev=ev, custody=custody)
+    log_custody(oid, current_user.username, "Evidence record viewed")
+    return render_template("evidence_detail.html", ev=ev, case=case, custody=custody)
 
 
 @app.route("/evidence/<evidence_id>/verify")
@@ -277,6 +323,7 @@ def verify_evidence(evidence_id):
         abort(404)
 
     filepath = os.path.join(app.config["UPLOAD_FOLDER"], ev["stored_filename"])
+    current_hash = None
     if not os.path.exists(filepath):
         result = "missing"
     else:
@@ -286,10 +333,20 @@ def verify_evidence(evidence_id):
     log_custody(oid, current_user.username, f"Verification run -> {result}")
     log_audit(current_user.username, f"Verified evidence '{ev['original_filename']}' -> {result}")
 
-    ev = serialize(evidence_col.find_one({"_id": oid}))
+    ev_serial = serialize(evidence_col.find_one({"_id": oid}))
+    case = serialize(cases_col.find_one({"_id": ev_serial.get("case_id")}))
+    ev_serial["file_exists"] = os.path.exists(filepath)
+    ev_serial["file_size_bytes"] = os.path.getsize(filepath) if ev_serial["file_exists"] else 0
     custody = serialize_many(custody_col.find({"evidence_id": oid}).sort("_id", 1))
 
-    return render_template("evidence_detail.html", ev=ev, custody=custody, verify_result=result)
+    return render_template(
+        "evidence_detail.html",
+        ev=ev_serial,
+        case=case,
+        custody=custody,
+        verify_result=result,
+        current_hash=current_hash
+    )
 
 
 @app.route("/evidence/<evidence_id>/download")
@@ -312,28 +369,51 @@ def download_evidence(evidence_id):
 @login_required
 def search():
     query = request.args.get("q", "").strip()
+    case_id_filter = request.args.get("case_id", "").strip()
+    all_cases = serialize_many(cases_col.find().sort("title", 1))
+
     results = []
-    if query:
-        # find matching cases first (by title), then evidence by filename/uploader/case
-        matching_case_ids = [c["_id"] for c in cases_col.find(
-            {"title": {"$regex": query, "$options": "i"}}
-        )]
-        cursor = evidence_col.find({
-            "$or": [
+    if query or case_id_filter:
+        filter_conditions = []
+
+        if query:
+            matching_case_ids = [c["_id"] for c in cases_col.find(
+                {"title": {"$regex": query, "$options": "i"}}
+            )]
+            query_or = [
                 {"original_filename": {"$regex": query, "$options": "i"}},
                 {"uploader": {"$regex": query, "$options": "i"}},
+                {"file_hash": {"$regex": query, "$options": "i"}},
                 {"case_id": {"$in": matching_case_ids}},
             ]
-        }).sort("_id", -1)
+            filter_conditions.append({"$or": query_or})
 
-        results = []
-        for ev in cursor:
-            ev = serialize(ev)
-            case = cases_col.find_one({"_id": ev["case_id"]})
-            ev["case_title"] = case["title"] if case else "-"
-            results.append(ev)
+        if case_id_filter:
+            try:
+                filter_conditions.append({"case_id": ObjectId(case_id_filter)})
+            except (InvalidId, TypeError):
+                pass
 
-    return render_template("search.html", query=query, results=results)
+        if filter_conditions:
+            mongo_query = {"$and": filter_conditions} if len(filter_conditions) > 1 else filter_conditions[0]
+            cursor = evidence_col.find(mongo_query).sort("_id", -1)
+
+            for ev in cursor:
+                ev = serialize(ev)
+                case = cases_col.find_one({"_id": ev["case_id"]})
+                ev["case_title"] = case["title"] if case else "-"
+                filepath = os.path.join(app.config["UPLOAD_FOLDER"], ev.get("stored_filename", ""))
+                ev["file_exists"] = os.path.exists(filepath)
+                ev["file_size_bytes"] = os.path.getsize(filepath) if ev["file_exists"] else 0
+                results.append(ev)
+
+    return render_template(
+        "search.html",
+        query=query,
+        case_id_filter=case_id_filter,
+        cases=all_cases,
+        results=results
+    )
 
 
 # ---------- Audit logs (admin only) ----------
@@ -370,12 +450,17 @@ def case_report(case_id):
 # ---------- Error handlers ----------
 @app.errorhandler(403)
 def forbidden(e):
-    return render_template("error.html", code=403, message="Access denied. Admins only."), 403
+    return render_template("error.html", code=403, message="Access denied. Administrator privileges required."), 403
 
 
 @app.errorhandler(404)
 def not_found(e):
-    return render_template("error.html", code=404, message="Page not found."), 404
+    return render_template("error.html", code=404, message="The requested forensic record or page was not found."), 404
+
+
+@app.errorhandler(500)
+def server_error(e):
+    return render_template("error.html", code=500, message="An internal system exception occurred in the evidence engine."), 500
 
 
 if __name__ == "__main__":

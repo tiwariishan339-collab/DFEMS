@@ -1,37 +1,281 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - DFEMS{% endblock %}
+{% block title %}Forensic Dashboard - DFEMS{% endblock %}
+
+{% block breadcrumb %}
+<span>Forensic Operations Dashboard</span>
+{% endblock %}
+
 {% block content %}
-<h3>Dashboard</h3>
-<div class="row mt-3">
-    <div class="col-md-4">
-        <div class="card text-center p-3">
-            <h5>Total Cases</h5>
-            <h2>{{ total_cases }}</h2>
+<!-- Welcome & Quick Status Bar -->
+<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+    <div>
+        <h2 class="h3 fw-bold text-white mb-1">
+            <i class="bi bi-shield-shaded text-cyan me-2"></i>Investigation Command Center
+        </h2>
+        <p class="text-secondary small mb-0">
+            Cryptographic evidence monitoring, custody tracking, and SHA-256 tamper verification.
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('upload') }}" class="btn btn-cyber-primary">
+            <i class="bi bi-cloud-arrow-up-fill"></i>
+            <span>Register Evidence</span>
+        </a>
+        <a href="{{ url_for('cases') }}" class="btn btn-cyber-outline">
+            <i class="bi bi-folder-plus"></i>
+            <span>New Case</span>
+        </a>
+    </div>
+</div>
+
+<!-- Key Performance & Forensic Metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-card-inner">
+                <div>
+                    <div class="stat-title">Active Cases</div>
+                    <h3 class="stat-value">{{ total_cases }}</h3>
+                    <small class="text-secondary d-flex align-items-center gap-1 mt-1">
+                        <i class="bi bi-folder-check text-cyan"></i>
+                        <span>Tracked dockets</span>
+                    </small>
+                </div>
+                <div class="stat-icon-wrapper">
+                    <i class="bi bi-folder2-open"></i>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card text-center p-3">
-            <h5>Total Evidence Files</h5>
-            <h2>{{ total_evidence }}</h2>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-card-inner">
+                <div>
+                    <div class="stat-title">Secured Evidence</div>
+                    <h3 class="stat-value">{{ total_evidence }}</h3>
+                    <small class="text-secondary d-flex align-items-center gap-1 mt-1">
+                        <i class="bi bi-file-earmark-lock text-cyan"></i>
+                        <span>SHA-256 hashed items</span>
+                    </small>
+                </div>
+                <div class="stat-icon-wrapper">
+                    <i class="bi bi-database-lock"></i>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card text-center p-3">
-            <a href="{{ url_for('upload') }}" class="btn btn-dark mt-2">+ Upload New Evidence</a>
-            <a href="{{ url_for('cases') }}" class="btn btn-outline-dark mt-2">+ Create New Case</a>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-card-inner">
+                <div>
+                    <div class="stat-title">Custody Logs</div>
+                    <h3 class="stat-value">{{ total_custody }}</h3>
+                    <small class="text-secondary d-flex align-items-center gap-1 mt-1">
+                        <i class="bi bi-link-45deg text-purple-neon"></i>
+                        <span>Chain custody links</span>
+                    </small>
+                </div>
+                <div class="stat-icon-wrapper stat-icon-purple">
+                    <i class="bi bi-bezier2"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-card-inner">
+                <div>
+                    <div class="stat-title">Audit Trail Entries</div>
+                    <h3 class="stat-value">{{ total_audits }}</h3>
+                    <small class="text-secondary d-flex align-items-center gap-1 mt-1">
+                        <i class="bi bi-shield-check text-success"></i>
+                        <span>Immutable records</span>
+                    </small>
+                </div>
+                <div class="stat-icon-wrapper stat-icon-purple">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<h5 class="mt-4">Recent Activity</h5>
-<table class="table table-striped">
-    <thead><tr><th>Time</th><th>User</th><th>Action</th></tr></thead>
-    <tbody>
-    {% for log in recent_activity %}
-        <tr><td>{{ log.timestamp }}</td><td>{{ log.username }}</td><td>{{ log.action }}</td></tr>
-    {% else %}
-        <tr><td colspan="3">No activity yet.</td></tr>
-    {% endfor %}
-    </tbody>
-</table>
+<!-- Main Dual-Column Panel -->
+<div class="row g-4">
+    <!-- Left Column: Case Overviews & Evidence Registry Highlights -->
+    <div class="col-lg-7">
+        <!-- Active Cases Overview -->
+        <div class="card mb-4">
+            <div class="card-header-cyber">
+                <h5><i class="bi bi-folder-symlink text-cyan"></i> Recent Investigation Cases</h5>
+                <a href="{{ url_for('cases') }}" class="btn btn-sm btn-cyber-outline">View All Cases</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table-cyber">
+                    <thead>
+                        <tr>
+                            <th>Case Title</th>
+                            <th>Lead Investigator</th>
+                            <th>Evidence</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in recent_cases %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-white">{{ c.title }}</div>
+                                <div class="text-secondary small font-monospace">{{ c.id[:10] }}...</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-dark border border-secondary text-light">{{ c.created_by }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info bg-opacity-10 text-cyan border border-info border-opacity-25">
+                                    {{ c.evidence_count }} Files
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('case_detail', case_id=c.id) }}" class="btn btn-sm btn-cyber-outline py-1 px-2" title="Inspect Case">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox fs-4 d-block mb-1"></i> No active cases registered yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Latest Evidence Uploaded -->
+        <div class="card">
+            <div class="card-header-cyber">
+                <h5><i class="bi bi-file-earmark-binary text-cyan"></i> Recent Evidence Registry</h5>
+                <a href="{{ url_for('upload') }}" class="btn btn-sm btn-cyber-primary">
+                    <i class="bi bi-plus-lg"></i> Upload
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="table-cyber">
+                    <thead>
+                        <tr>
+                            <th>Evidence File</th>
+                            <th>Case Docket</th>
+                            <th>SHA-256 Digest</th>
+                            <th class="text-end">Verification</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ev in recent_evidence %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold text-white d-flex align-items-center gap-2">
+                                    <i class="bi bi-file-earmark-lock text-cyan"></i>
+                                    <span>{{ ev.original_filename }}</span>
+                                </div>
+                                <div class="text-secondary small">{{ ev.file_size_bytes|format_file_size }} • By {{ ev.uploader }}</div>
+                            </td>
+                            <td>
+                                <span class="text-secondary small">{{ ev.case_title }}</span>
+                            </td>
+                            <td>
+                                <code>{{ ev.file_hash[:12] }}...{{ ev.file_hash[-6:] }}</code>
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('evidence_detail', evidence_id=ev.id) }}" class="btn btn-sm btn-cyber-outline py-1 px-2">
+                                    <i class="bi bi-shield-check text-cyan"></i> Verify
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                <i class="bi bi-shield-slash fs-4 d-block mb-1"></i> No evidence files currently registered.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Security Activity Log & Integrity Architecture -->
+    <div class="col-lg-5">
+        <!-- Live Security Activity Trail -->
+        <div class="card mb-4">
+            <div class="card-header-cyber">
+                <h5><i class="bi bi-activity text-purple-neon"></i> Security Activity Trail</h5>
+                {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('audit_logs') }}" class="btn btn-sm btn-cyber-outline">Full Audit</a>
+                {% endif %}
+            </div>
+            <div class="p-3">
+                {% for log in recent_activity %}
+                <div class="d-flex align-items-start gap-3 py-2 border-bottom border-secondary border-opacity-10">
+                    <div class="mt-1">
+                        {% if 'login' in log.action|lower %}
+                            <span class="action-badge badge-auth"><i class="bi bi-box-arrow-in-right"></i> Auth</span>
+                        {% elif 'upload' in log.action|lower %}
+                            <span class="action-badge badge-upload"><i class="bi bi-cloud-arrow-up"></i> Upload</span>
+                        {% elif 'verif' in log.action|lower %}
+                            <span class="action-badge badge-verify"><i class="bi bi-shield-check"></i> Verify</span>
+                        {% elif 'download' in log.action|lower %}
+                            <span class="action-badge badge-download"><i class="bi bi-download"></i> Extract</span>
+                        {% else %}
+                            <span class="action-badge badge-view"><i class="bi bi-file-text"></i> System</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1 overflow-hidden">
+                        <div class="small text-white text-truncate">{{ log.action }}</div>
+                        <div class="d-flex align-items-center gap-2 small text-muted font-monospace">
+                            <span><i class="bi bi-person me-1"></i>{{ log.username }}</span>
+                            <span>•</span>
+                            <span>{{ log.timestamp }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-clock-history fs-4 d-block mb-1"></i> No security activity logged yet.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- System Cryptographic Engine Card -->
+        <div class="card">
+            <div class="card-header-cyber">
+                <h5><i class="bi bi-cpu text-cyan"></i> Forensics Cryptographic Specs</h5>
+            </div>
+            <div class="p-3 small text-secondary">
+                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom border-secondary border-opacity-10">
+                    <span>Hashing Standard</span>
+                    <span class="badge bg-dark border border-info text-cyan font-monospace">SHA-256 (FIPS 180-4)</span>
+                </div>
+                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom border-secondary border-opacity-10">
+                    <span>Buffer Block Size</span>
+                    <span class="text-white font-monospace">8192 Bytes (8 KB)</span>
+                </div>
+                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom border-secondary border-opacity-10">
+                    <span>Chain of Custody</span>
+                    <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Enforced & Audited</span>
+                </div>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span>Backend Storage</span>
+                    <span class="text-white">MongoDB BSON + File Vault</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

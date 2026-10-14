@@ -1,40 +1,120 @@
 {% extends "base.html" %}
-{% block title %}Cases - DFEMS{% endblock %}
-{% block content %}
-<h3>Cases</h3>
+{% block title %}Case Dockets - DFEMS{% endblock %}
 
-<div class="card p-3 mb-4">
-    <h5>Create New Case</h5>
-    <form method="POST">
-        <div class="mb-2">
-            <label class="form-label">Title</label>
-            <input type="text" name="title" class="form-control" required>
-        </div>
-        <div class="mb-2">
-            <label class="form-label">Description</label>
-            <textarea name="description" class="form-control"></textarea>
-        </div>
-        <button type="submit" class="btn btn-dark">Create Case</button>
-    </form>
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard') }}">Dashboard</a>
+<span class="mx-2 text-muted">/</span>
+<span>Investigation Cases</span>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="h3 fw-bold text-white mb-1">
+            <i class="bi bi-folder2-open text-cyan me-2"></i>Forensic Case Dockets
+        </h2>
+        <p class="text-secondary small mb-0">
+            Organize digital forensic investigations and associate cryptographic evidence files.
+        </p>
+    </div>
 </div>
 
-<table class="table table-striped">
-    <thead><tr><th>ID</th><th>Title</th><th>Created By</th><th>Created At</th><th></th></tr></thead>
-    <tbody>
-    {% for c in cases %}
-        <tr>
-            <td>{{ c.id }}</td>
-            <td>{{ c.title }}</td>
-            <td>{{ c.created_by }}</td>
-            <td>{{ c.created_at }}</td>
-            <td>
-                <a href="{{ url_for('case_detail', case_id=c.id) }}" class="btn btn-sm btn-outline-dark">View</a>
-                <a href="{{ url_for('case_report', case_id=c.id) }}" class="btn btn-sm btn-outline-secondary">Report</a>
-            </td>
-        </tr>
-    {% else %}
-        <tr><td colspan="5">No cases yet.</td></tr>
-    {% endfor %}
-    </tbody>
-</table>
+<div class="row g-4">
+    <!-- Case Creation Form -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header-cyber">
+                <h5><i class="bi bi-plus-circle text-cyan"></i> Initiate New Case</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Case Docket Title <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" placeholder="e.g. Case #104 - Server Breach Seizure" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Investigation Summary & Scope</label>
+                        <textarea name="description" class="form-control" rows="4" placeholder="Brief scope of the digital forensics investigation, devices seized, or incident context..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-cyber-primary w-100 justify-content-center">
+                        <i class="bi bi-shield-plus"></i>
+                        <span>Register Case Docket</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cases List Table -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header-cyber">
+                <h5><i class="bi bi-card-list text-cyan"></i> Registered Case Dockets</h5>
+                <span class="badge bg-dark border border-secondary text-cyan font-monospace">{{ cases|length }} Cases</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table-cyber">
+                    <thead>
+                        <tr>
+                            <th>Case Title & Docket</th>
+                            <th>Lead Officer</th>
+                            <th>Evidence</th>
+                            <th>Date Opened</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in cases %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-white">{{ c.title }}</div>
+                                {% if c.description %}
+                                <div class="text-secondary small text-truncate" style="max-width: 250px;">{{ c.description }}</div>
+                                {% endif %}
+                                <div class="text-muted small font-monospace mt-1">
+                                    <span>ID: {{ c.id[:10] }}...</span>
+                                    <button class="btn btn-copy ms-1" onclick="copyToClipboard('{{ c.id }}', this)" title="Copy Docket ID">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-dark border border-info border-opacity-25 text-light">
+                                    <i class="bi bi-person me-1"></i>{{ c.created_by }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-cyan bg-opacity-10 text-cyan border border-info border-opacity-25">
+                                    {{ c.evidence_count }} Items
+                                </span>
+                            </td>
+                            <td>
+                                <div class="text-secondary small font-monospace">{{ c.created_at }}</div>
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1">
+                                    <a href="{{ url_for('case_detail', case_id=c.id) }}" class="btn btn-sm btn-cyber-outline py-1 px-2" title="Inspect Docket">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                    <a href="{{ url_for('case_report', case_id=c.id) }}" class="btn btn-sm btn-cyber-purple py-1 px-2" title="Export PDF Report">
+                                        <i class="bi bi-file-earmark-pdf"></i> PDF
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
+                                <h6>No Case Dockets Found</h6>
+                                <p class="small">Initiate your first case docket using the form on the left.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

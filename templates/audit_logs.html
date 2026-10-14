@@ -1,15 +1,87 @@
 {% extends "base.html" %}
-{% block title %}Audit Logs - DFEMS{% endblock %}
+{% block title %}System Audit Logs - DFEMS{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard') }}">Dashboard</a>
+<span class="mx-2 text-muted">/</span>
+<span>Security Audit Trail</span>
+{% endblock %}
+
 {% block content %}
-<h3>Audit Logs (Admin)</h3>
-<table class="table table-striped">
-    <thead><tr><th>Timestamp</th><th>User</th><th>Action</th></tr></thead>
-    <tbody>
-    {% for log in logs %}
-        <tr><td>{{ log.timestamp }}</td><td>{{ log.username }}</td><td>{{ log.action }}</td></tr>
-    {% else %}
-        <tr><td colspan="3">No logs yet.</td></tr>
-    {% endfor %}
-    </tbody>
-</table>
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-purple bg-opacity-20 text-purple border border-purple border-opacity-30" style="color: #c4b5fd; background: rgba(139, 92, 246, 0.2);">
+                <i class="bi bi-shield-lock-fill me-1"></i>Administrator Restricted
+            </span>
+        </div>
+        <h2 class="h3 fw-bold text-white mb-0">System Security Audit Trail</h2>
+    </div>
+    <div>
+        <span class="badge bg-dark border border-secondary text-cyan font-monospace px-3 py-2">
+            {{ logs|length }} Total Audit Records
+        </span>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header-cyber">
+        <h5>
+            <i class="bi bi-journal-text text-purple-neon"></i> Immutable Forensic Access Logs
+        </h5>
+        <small class="text-secondary">Chronological event ledger</small>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table-cyber">
+            <thead>
+                <tr>
+                    <th style="width: 220px;">Timestamp</th>
+                    <th style="width: 200px;">User Account</th>
+                    <th>Action Executed</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td class="font-monospace text-secondary small">{{ log.timestamp }}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="user-avatar-initial" style="width: 28px; height: 28px; font-size: 0.8rem;">
+                                {{ log.username[0]|upper }}
+                            </div>
+                            <span class="fw-semibold text-white">{{ log.username }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        {% if 'login' in log.action|lower %}
+                            <span class="action-badge badge-auth me-2"><i class="bi bi-box-arrow-in-right"></i> Auth</span>
+                        {% elif 'logout' in log.action|lower %}
+                            <span class="action-badge bg-secondary bg-opacity-25 text-light border border-secondary me-2"><i class="bi bi-box-arrow-left"></i> Session</span>
+                        {% elif 'upload' in log.action|lower %}
+                            <span class="action-badge badge-upload me-2"><i class="bi bi-cloud-arrow-up"></i> Ingest</span>
+                        {% elif 'verif' in log.action|lower %}
+                            <span class="action-badge badge-verify me-2"><i class="bi bi-shield-check"></i> Integrity</span>
+                        {% elif 'download' in log.action|lower %}
+                            <span class="action-badge badge-download me-2"><i class="bi bi-download"></i> Extract</span>
+                        {% elif 'report' in log.action|lower %}
+                            <span class="action-badge bg-info bg-opacity-20 text-info border border-info border-opacity-30 me-2"><i class="bi bi-file-earmark-pdf"></i> PDF</span>
+                        {% else %}
+                            <span class="action-badge badge-view me-2"><i class="bi bi-gear"></i> System</span>
+                        {% endif %}
+                        <span class="text-light">{{ log.action }}</span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" class="text-center py-5 text-muted">
+                        <i class="bi bi-shield-slash fs-1 d-block mb-2 text-secondary"></i>
+                        No audit events recorded.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

@@ -1,9 +1,27 @@
 {% extends "base.html" %}
-{% block title %}Error {{ code }}{% endblock %}
+{% block title %}System Error {{ code }} - DFEMS{% endblock %}
+
 {% block content %}
-<div class="text-center mt-5">
-    <h1>{{ code }}</h1>
-    <p>{{ message }}</p>
-    <a href="{{ url_for('dashboard') }}" class="btn btn-dark">Go to Dashboard</a>
+<div class="row justify-content-center py-5">
+    <div class="col-md-6 text-center">
+        <div class="card p-5">
+            <div class="mb-3">
+                <i class="bi bi-shield-slash-fill text-danger" style="font-size: 56px; filter: drop-shadow(0 0 15px var(--danger-glow));"></i>
+            </div>
+            <h1 class="display-4 fw-bold font-monospace text-danger mb-2">{{ code }}</h1>
+            <h4 class="text-white mb-3">Security Access Exception</h4>
+            <p class="text-secondary mb-4">{{ message }}</p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-cyber-primary">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Return to Dashboard</span>
+                </a>
+                <a href="{{ url_for('cases') }}" class="btn btn-cyber-outline">
+                    <i class="bi bi-folder2-open"></i>
+                    <span>View Cases</span>
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

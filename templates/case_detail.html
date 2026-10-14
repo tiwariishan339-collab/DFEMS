@@ -1,26 +1,137 @@
 {% extends "base.html" %}
-{% block title %}{{ case.title }} - DFEMS{% endblock %}
-{% block content %}
-<h3>{{ case.title }}</h3>
-<p>{{ case.description }}</p>
-<p class="CREATED-BY">Created by {{ case.created_by }} on {{ case.created_at }}</p>
-<a href="{{ url_for('case_report', case_id=case.id) }}" class="btn btn-outline-secondary mb-3">📄 Download PDF Report</a>
+{% block title %}{{ case.title }} - Case Details - DFEMS{% endblock %}
 
-<h5>Evidence in this case</h5>
-<table class="table table-striped">
-    <thead><tr><th>File</th><th>SHA-256 Hash</th><th>Uploader</th><th>Uploaded At</th><th></th></tr></thead>
-    <tbody>
-    {% for ev in evidence_list %}
-        <tr>
-            <td>{{ ev.original_filename }}</td>
-            <td><code>{{ ev.file_hash[:16] }}...</code></td>
-            <td>{{ ev.uploader }}</td>
-            <td>{{ ev.uploaded_at }}</td>
-            <td><a href="{{ url_for('evidence_detail', evidence_id=ev.id) }}" class="btn btn-sm btn-outline-dark">View</a></td>
-        </tr>
-    {% else %}
-        <tr><td colspan="5">No evidence uploaded for this case yet.</td></tr>
-    {% endfor %}
-    </tbody>
-</table>
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard') }}">Dashboard</a>
+<span class="mx-2 text-muted">/</span>
+<a href="{{ url_for('cases') }}">Cases</a>
+<span class="mx-2 text-muted">/</span>
+<span>{{ case.title }}</span>
+{% endblock %}
+
+{% block content %}
+<!-- Case Header Card -->
+<div class="card mb-4">
+    <div class="card-body p-4">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3">
+            <div>
+                <span class="badge bg-cyan bg-opacity-10 text-cyan border border-info border-opacity-25 mb-2">
+                    <i class="bi bi-folder-check me-1"></i>Case Docket
+                </span>
+                <h2 class="h3 fw-bold text-white mb-1">{{ case.title }}</h2>
+                <div class="text-muted small font-monospace d-flex align-items-center gap-2">
+                    <span>Docket ID: {{ case.id }}</span>
+                    <button class="btn btn-copy" onclick="copyToClipboard('{{ case.id }}', this)" title="Copy Docket ID">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('upload', case_id=case.id) }}" class="btn btn-cyber-primary">
+                    <i class="bi bi-cloud-arrow-up-fill"></i>
+                    <span>Add Evidence</span>
+                </a>
+                <a href="{{ url_for('case_report', case_id=case.id) }}" class="btn btn-cyber-purple">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                    <span>Export PDF Report</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="p-3 rounded mb-3" style="background: rgba(3, 8, 20, 0.7); border: 1px solid rgba(56, 189, 248, 0.15);">
+            <div class="text-secondary small fw-semibold mb-1">Investigation Scope & Description:</div>
+            <div class="text-white">{{ case.description or "No descriptive notes recorded for this investigation docket." }}</div>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center gap-4 text-secondary small pt-2 border-top border-secondary border-opacity-10">
+            <div>
+                <i class="bi bi-person-badge text-cyan me-1"></i>
+                <span>Lead Officer: <strong class="text-white">{{ case.created_by }}</strong></span>
+            </div>
+            <div>
+                <i class="bi bi-calendar-event text-cyan me-1"></i>
+                <span>Registered: <strong class="text-white font-monospace">{{ case.created_at }}</strong></span>
+            </div>
+            <div>
+                <i class="bi bi-file-earmark-lock text-cyan me-1"></i>
+                <span>Secured Files: <strong class="text-white">{{ evidence_list|length }}</strong></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Evidence Table Card -->
+<div class="card">
+    <div class="card-header-cyber">
+        <h5>
+            <i class="bi bi-file-earmark-binary text-cyan"></i> Evidence Attached to this Docket
+        </h5>
+        <span class="badge bg-dark border border-secondary text-cyan font-monospace">{{ evidence_list|length }} Registered</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table-cyber">
+            <thead>
+                <tr>
+                    <th>Evidence Item</th>
+                    <th>SHA-256 Digest</th>
+                    <th>Investigator</th>
+                    <th>Date Logged</th>
+                    <th class="text-end">Verification & Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ev in evidence_list %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-file-earmark-code fs-4 text-cyan"></i>
+                            <div>
+                                <div class="fw-bold text-white">{{ ev.original_filename }}</div>
+                                <div class="text-secondary small">{{ ev.file_size_bytes|format_file_size }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <code class="font-monospace">{{ ev.file_hash[:12] }}...{{ ev.file_hash[-8:] }}</code>
+                            <button class="btn btn-copy" onclick="copyToClipboard('{{ ev.file_hash }}', this)" title="Copy Full SHA-256 Hash">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-dark border border-secondary text-light">
+                            {{ ev.uploader }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="text-secondary small font-monospace">{{ ev.uploaded_at }}</span>
+                    </td>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-2">
+                            <a href="{{ url_for('evidence_detail', evidence_id=ev.id) }}" class="btn btn-sm btn-cyber-outline py-1 px-3">
+                                <i class="bi bi-shield-check text-cyan"></i> Inspect & Verify
+                            </a>
+                            <a href="{{ url_for('download_evidence', evidence_id=ev.id) }}" class="btn btn-sm btn-cyber-outline py-1 px-2" title="Download File">
+                                <i class="bi bi-download"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                        <h6>No Evidence Attached to this Docket Yet</h6>
+                        <p class="small mb-3">Upload digital artifacts, forensic images, or logs to secure their SHA-256 integrity.</p>
+                        <a href="{{ url_for('upload', case_id=case.id) }}" class="btn btn-sm btn-cyber-primary">
+                            <i class="bi bi-cloud-arrow-up-fill"></i> Upload First Evidence
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

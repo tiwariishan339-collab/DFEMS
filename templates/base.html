@@ -2,42 +2,217 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}DFEMS{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DFEMS - Digital Forensic Evidence Management System{% endblock %}</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Custom Cyber Forensic Theme -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
-    <a class="navbar-brand" href="{{ url_for('dashboard') if current_user.is_authenticated else url_for('login') }}">🔒 DFEMS</a>
+
+<div id="app-container">
     {% if current_user.is_authenticated %}
-    <div class="collapse navbar-collapse">
-        <ul class="navbar-nav me-auto">
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('cases') }}">Cases</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('upload') }}">Upload Evidence</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('search') }}">Search</a></li>
+    <!-- Mobile Overlay -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <!-- Cyber Sidebar Navigation -->
+    <aside id="sidebar" class="cyber-sidebar">
+        <div class="sidebar-header">
+            <a href="{{ url_for('dashboard') }}" class="brand-badge">
+                <div class="brand-icon-box">
+                    <i class="bi bi-shield-shaded"></i>
+                </div>
+                <div>
+                    <h1 class="brand-title">DFEMS</h1>
+                    <div class="brand-subtitle">Forensic Lab</div>
+                </div>
+            </a>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Core Operations</div>
+            <a href="{{ url_for('dashboard') }}" class="sidebar-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                <i class="bi bi-speedometer2"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('cases') }}" class="sidebar-link {% if request.endpoint in ['cases', 'case_detail'] %}active{% endif %}">
+                <i class="bi bi-folder2-open"></i>
+                <span>Cases</span>
+            </a>
+            <a href="{{ url_for('upload') }}" class="sidebar-link {% if request.endpoint == 'upload' %}active{% endif %}">
+                <i class="bi bi-cloud-arrow-up-fill"></i>
+                <span>Upload Evidence</span>
+            </a>
+            <a href="{{ url_for('search') }}" class="sidebar-link {% if request.endpoint == 'search' %}active{% endif %}">
+                <i class="bi bi-search"></i>
+                <span>Search Evidence</span>
+            </a>
+
             {% if current_user.role == 'admin' %}
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('audit_logs') }}">Audit Logs</a></li>
+            <div class="nav-section-title mt-3">Administration</div>
+            <a href="{{ url_for('audit_logs') }}" class="sidebar-link {% if request.endpoint == 'audit_logs' %}active{% endif %}">
+                <i class="bi bi-shield-lock-fill"></i>
+                <span>Audit Logs</span>
+                <span class="badge bg-purple ms-auto" style="background: rgba(139, 92, 246, 0.3); color: #c4b5fd; font-size: 0.65rem;">ADMIN</span>
+            </a>
             {% endif %}
-        </ul>
-        <span class="navbar-text text-light me-3">{{ current_user.username }} ({{ current_user.role }})</span>
-        <a class="btn btn-outline-light btn-sm" href="{{ url_for('logout') }}">Logout</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-chip">
+                <div class="user-avatar-initial">{{ current_user.username[0]|upper }}</div>
+                <div class="user-details">
+                    <p class="user-name" title="{{ current_user.username }}">{{ current_user.username }}</p>
+                    <span class="user-role-badge {% if current_user.role == 'admin' %}role-admin{% else %}role-investigator{% endif %}">
+                        {{ current_user.role }}
+                    </span>
+                </div>
+            </div>
+            <a href="{{ url_for('logout') }}" class="btn-sidebar-logout">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Disconnect</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content Panel -->
+    <div class="main-wrapper">
+        <header class="cyber-topbar">
+            <div class="topbar-left">
+                <button id="sidebarToggle" class="sidebar-toggle-btn" aria-label="Toggle navigation">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="page-breadcrumb">
+                    <i class="bi bi-terminal me-1 text-cyan"></i>
+                    {% block breadcrumb %}
+                    <span>DFEMS Forensic Console</span>
+                    {% endblock %}
+                </div>
+            </div>
+
+            <div class="topbar-right d-flex align-items-center gap-3">
+                <div class="topbar-status-pill d-none d-sm-inline-flex">
+                    <span class="status-pulse-dot"></span>
+                    <span>SHA-256 Engine Active</span>
+                </div>
+                <a href="{{ url_for('upload') }}" class="btn btn-sm btn-cyber-primary d-none d-md-inline-flex">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>New Evidence</span>
+                </a>
+            </div>
+        </header>
+
+        <main class="content-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category if category != 'danger' else 'danger' }} d-flex align-items-center justify-content-between alert-dismissible fade show" role="alert">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if category == 'success' %}
+                                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                                {% elif category == 'danger' %}
+                                    <i class="bi bi-exclamation-octagon-fill text-danger fs-5"></i>
+                                {% elif category == 'warning' %}
+                                    <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+                                {% else %}
+                                    <i class="bi bi-info-circle-fill text-info fs-5"></i>
+                                {% endif %}
+                                <span>{{ message }}</span>
+                            </div>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="cyber-footer">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-shield-check text-cyan"></i>
+                <span>DFEMS Forensic Architecture • Integrity Protection System</span>
+            </div>
+            <div>
+                <span class="footer-creator-badge">
+                    <i class="bi bi-code-slash"></i> Created by Ishan
+                </span>
+            </div>
+        </footer>
+    </div>
+
+    {% else %}
+    <!-- Public Layout (Login/Signup) -->
+    <div class="public-wrapper d-flex flex-column min-height-100">
+        <header class="py-3 px-4 border-bottom border-secondary border-opacity-25 bg-dark bg-opacity-50 backdrop-blur">
+            <div class="container d-flex align-items-center justify-content-between">
+                <a href="{{ url_for('login') }}" class="brand-badge">
+                    <div class="brand-icon-box">
+                        <i class="bi bi-shield-shaded"></i>
+                    </div>
+                    <div>
+                        <h1 class="brand-title">DFEMS</h1>
+                        <div class="brand-subtitle">Forensic Lab</div>
+                    </div>
+                </a>
+                <div class="topbar-status-pill">
+                    <span class="status-pulse-dot"></span>
+                    <span>Secure Evidence Portal</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow-1 py-5">
+            <div class="container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="row justify-content-center">
+                                <div class="col-md-5">
+                                    <div class="alert alert-{{ category }} d-flex align-items-center justify-content-between" role="alert">
+                                        <div class="d-flex align-items-center gap-2">
+                                            {% if category == 'success' %}
+                                                <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                                            {% else %}
+                                                <i class="bi bi-exclamation-octagon-fill text-danger fs-5"></i>
+                                            {% endif %}
+                                            <span>{{ message }}</span>
+                                        </div>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% block public_content %}{% endblock %}
+            </div>
+        </main>
+
+        <footer class="cyber-footer">
+            <div class="container d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2">
+                <span>Digital Forensic Evidence Management System</span>
+                <span class="footer-creator-badge">
+                    <i class="bi bi-code-slash"></i> Created by Ishan
+                </span>
+            </div>
+        </footer>
     </div>
     {% endif %}
-</nav>
-
-<div class="container mt-4">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    {% block content %}{% endblock %}
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Bootstrap 5 Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Main Interactive Script -->
+<script src="{{ url_for('static', filename='main.js') }}"></script>
+{% block extra_scripts %}{% endblock %}
 </body>
 </html>

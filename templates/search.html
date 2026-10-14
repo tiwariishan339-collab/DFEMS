@@ -1,28 +1,151 @@
 {% extends "base.html" %}
-{% block title %}Search - DFEMS{% endblock %}
-{% block content %}
-<h3>Search Evidence</h3>
-<form method="GET" class="d-flex mb-4" style="max-width: 500px;">
-    <input type="text" name="q" value="{{ query }}" class="form-control me-2" placeholder="Filename, uploader, or case title...">
-    <button type="submit" class="btn btn-dark">Search</button>
-</form>
+{% block title %}Search Evidence Registry - DFEMS{% endblock %}
 
-{% if query %}
-<table class="table table-striped">
-    <thead><tr><th>File</th><th>Case</th><th>Uploader</th><th>Uploaded At</th><th></th></tr></thead>
-    <tbody>
-    {% for ev in results %}
-        <tr>
-            <td>{{ ev.original_filename }}</td>
-            <td>{{ ev.case_title }}</td>
-            <td>{{ ev.uploader }}</td>
-            <td>{{ ev.uploaded_at }}</td>
-            <td><a href="{{ url_for('evidence_detail', evidence_id=ev.id) }}" class="btn btn-sm btn-outline-dark">View</a></td>
-        </tr>
-    {% else %}
-        <tr><td colspan="5">No results found.</td></tr>
-    {% endfor %}
-    </tbody>
-</table>
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard') }}">Dashboard</a>
+<span class="mx-2 text-muted">/</span>
+<span>Search & Filter Evidence</span>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h2 class="h3 fw-bold text-white mb-1">
+            <i class="bi bi-search text-cyan me-2"></i>Forensic Evidence Search
+        </h2>
+        <p class="text-secondary small mb-0">
+            Query across evidence filenames, cryptographic SHA-256 hash digests, investigators, or investigation dockets.
+        </p>
+    </div>
+</div>
+
+<!-- Search Query Console -->
+<div class="card mb-4">
+    <div class="card-header-cyber">
+        <h5><i class="bi bi-sliders text-cyan"></i> Filter & Query Parameters</h5>
+    </div>
+    <div class="card-body p-4">
+        <form method="GET" action="{{ url_for('search') }}">
+            <div class="row g-3">
+                <div class="col-md-7">
+                    <label class="form-label">Search Query (Keyword / Hash / Filename / Officer)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary border-opacity-50 text-cyan">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" name="q" value="{{ query }}" class="form-control" placeholder="Search by filename, uploader name, SHA-256 hash...">
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Filter by Case Docket</label>
+                    <select name="case_id" class="form-select">
+                        <option value="">All Investigation Cases</option>
+                        {% for c in cases %}
+                        <option value="{{ c.id }}" {% if case_id_filter == c.id %}selected{% endif %}>
+                            {{ c.title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-cyber-primary w-100 justify-content-center">
+                        <span>Query</span>
+                    </button>
+                    {% if query or case_id_filter %}
+                    <a href="{{ url_for('search') }}" class="btn btn-cyber-outline" title="Clear Filters">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Results Section -->
+{% if query or case_id_filter %}
+<div class="card">
+    <div class="card-header-cyber">
+        <h5>
+            <i class="bi bi-list-check text-cyan"></i> Query Results
+        </h5>
+        <span class="badge bg-dark border border-secondary text-cyan font-monospace">
+            {{ results|length }} Matching Items
+        </span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table-cyber">
+            <thead>
+                <tr>
+                    <th>Evidence Item</th>
+                    <th>Associated Case Docket</th>
+                    <th>SHA-256 Digest</th>
+                    <th>Logged By</th>
+                    <th>Timestamp</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ev in results %}
+                <tr>
+                    <td>
+                        <div class="fw-bold text-white d-flex align-items-center gap-2">
+                            <i class="bi bi-file-earmark-lock text-cyan"></i>
+                            <span>{{ ev.original_filename }}</span>
+                        </div>
+                        <div class="text-secondary small">{{ ev.file_size_bytes|format_file_size }}</div>
+                    </td>
+                    <td>
+                        <span class="text-light">{{ ev.case_title }}</span>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <code class="font-monospace">{{ ev.file_hash[:12] }}...{{ ev.file_hash[-6:] }}</code>
+                            <button class="btn btn-copy" onclick="copyToClipboard('{{ ev.file_hash }}', this)" title="Copy SHA-256">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-dark border border-secondary text-light">{{ ev.uploader }}</span>
+                    </td>
+                    <td>
+                        <span class="text-secondary small font-monospace">{{ ev.uploaded_at }}</span>
+                    </td>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-1">
+                            <a href="{{ url_for('evidence_detail', evidence_id=ev.id) }}" class="btn btn-sm btn-cyber-outline py-1 px-2" title="Inspect & Verify">
+                                <i class="bi bi-shield-check text-cyan"></i> Inspect
+                            </a>
+                            <a href="{{ url_for('download_evidence', evidence_id=ev.id) }}" class="btn btn-sm btn-cyber-outline py-1 px-2" title="Download Artifact">
+                                <i class="bi bi-download"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="bi bi-search fs-1 d-block mb-2 text-secondary"></i>
+                        <h6>No Matching Evidence Found</h6>
+                        <p class="small">Try adjusting your query term or resetting the case docket filter.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card p-5 text-center text-muted">
+    <i class="bi bi-search fs-1 mb-3 text-cyan" style="filter: drop-shadow(0 0 10px var(--cyan-glow));"></i>
+    <h5 class="text-white">Ready to Query Forensic Registry</h5>
+    <p class="small text-secondary mb-0">
+        Enter a keyword above to search for evidence files, inspect SHA-256 hashes, or filter by specific case dockets.
+    </p>
+</div>
 {% endif %}
 {% endblock %}

@@ -1,31 +1,249 @@
 {% extends "base.html" %}
-{% block title %}Evidence - DFEMS{% endblock %}
+{% block title %}Evidence: {{ ev.original_filename }} - DFEMS{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('dashboard') }}">Dashboard</a>
+<span class="mx-2 text-muted">/</span>
+{% if case %}
+<a href="{{ url_for('case_detail', case_id=case.id) }}">{{ case.title }}</a>
+<span class="mx-2 text-muted">/</span>
+{% endif %}
+<span>{{ ev.original_filename }}</span>
+{% endblock %}
+
 {% block content %}
-<h3>{{ ev.original_filename }}</h3>
+<!-- Top Header & Actions -->
+<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-cyan bg-opacity-10 text-cyan border border-info border-opacity-25">
+                <i class="bi bi-file-earmark-lock me-1"></i>Evidence Item
+            </span>
+            {% if case %}
+            <span class="badge bg-dark border border-secondary text-light">
+                <i class="bi bi-folder me-1"></i>{{ case.title }}
+            </span>
+            {% endif %}
+        </div>
+        <h2 class="h3 fw-bold text-white mb-0">{{ ev.original_filename }}</h2>
+    </div>
 
-<div class="card p-3 mb-3">
-    <p><b>Stored SHA-256 Hash:</b><br><code>{{ ev.file_hash }}</code></p>
-    <p><b>Uploaded By:</b> {{ ev.uploader }} &nbsp; | &nbsp; <b>At:</b> {{ ev.uploaded_at }}</p>
-
-    {% if verify_result == 'intact' %}
-        <div class="alert alert-success mb-0">✅ Evidence Intact — hash matches, no tampering detected.</div>
-    {% elif verify_result == 'tampered' %}
-        <div class="alert alert-danger mb-0">❌ Evidence Modified — current hash does NOT match stored hash!</div>
-    {% elif verify_result == 'missing' %}
-        <div class="alert alert-warning mb-0">⚠️ File missing from storage.</div>
-    {% endif %}
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('verify_evidence', evidence_id=ev.id) }}" class="btn btn-cyber-verify btn-verify-action">
+            <i class="bi bi-shield-check"></i>
+            <span>Run Integrity Verification</span>
+        </a>
+        <a href="{{ url_for('download_evidence', evidence_id=ev.id) }}" class="btn btn-cyber-outline">
+            <i class="bi bi-download"></i>
+            <span>Download Artifact</span>
+        </a>
+        {% if case %}
+        <a href="{{ url_for('case_detail', case_id=case.id) }}" class="btn btn-cyber-outline">
+            <i class="bi bi-arrow-left"></i>
+            <span>Docket</span>
+        </a>
+        {% endif %}
+    </div>
 </div>
 
-<a href="{{ url_for('verify_evidence', evidence_id=ev.id) }}" class="btn btn-dark">🔍 Verify Integrity</a>
-<a href="{{ url_for('download_evidence', evidence_id=ev.id) }}" class="btn btn-outline-dark">⬇ Download</a>
+<!-- Verification Result Banners -->
+{% if verify_result == 'intact' %}
+<div class="verify-banner-intact mb-4">
+    <div class="d-flex align-items-start gap-3">
+        <i class="bi bi-shield-fill-check fs-2 text-success"></i>
+        <div class="flex-grow-1">
+            <h5 class="fw-bold text-success mb-1">EVIDENCE INTEGRITY CONFIRMED (VERIFIED INTACT)</h5>
+            <p class="small text-light mb-3">
+                Cryptographic SHA-256 recalculation succeeded. The live on-disk bitstream matches the original baseline signature exactly. No tampering or alteration detected.
+            </p>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <div class="p-2 rounded" style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(16, 185, 129, 0.3);">
+                        <div class="text-secondary small">Stored Baseline Hash:</div>
+                        <code class="text-success small font-monospace">{{ ev.file_hash }}</code>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-2 rounded" style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(16, 185, 129, 0.3);">
+                        <div class="text-secondary small">Calculated Live Hash:</div>
+                        <code class="text-success small font-monospace">{{ current_hash }}</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-<h5 class="mt-4">Chain of Custody</h5>
-<table class="table table-striped">
-    <thead><tr><th>Timestamp</th><th>User</th><th>Action</th></tr></thead>
-    <tbody>
-    {% for c in custody %}
-        <tr><td>{{ c.timestamp }}</td><td>{{ c.username }}</td><td>{{ c.action }}</td></tr>
-    {% endfor %}
-    </tbody>
-</table>
+{% elif verify_result == 'tampered' %}
+<div class="verify-banner-tampered mb-4">
+    <div class="d-flex align-items-start gap-3">
+        <i class="bi bi-shield-fill-x fs-2 text-danger"></i>
+        <div class="flex-grow-1">
+            <h5 class="fw-bold text-danger mb-1">CRITICAL TAMPER ALERT (INTEGRITY COMPROMISED)</h5>
+            <p class="small text-light mb-3">
+                The current file's cryptographic SHA-256 signature DOES NOT match the recorded baseline. One or more bytes have been modified, corrupted, or tampered with on the storage medium.
+            </p>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <div class="p-2 rounded" style="background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(239, 68, 68, 0.4);">
+                        <div class="text-secondary small">Expected Stored Hash:</div>
+                        <code class="text-cyan small font-monospace">{{ ev.file_hash }}</code>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-2 rounded" style="background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(239, 68, 68, 0.4);">
+                        <div class="text-danger small">Live Altered Hash:</div>
+                        <code class="text-danger small font-monospace">{{ current_hash }}</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% elif verify_result == 'missing' %}
+<div class="verify-banner-missing mb-4">
+    <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-exclamation-triangle-fill fs-2 text-warning"></i>
+        <div>
+            <h5 class="fw-bold text-warning mb-1">STORAGE ERROR: EVIDENCE FILE MISSING</h5>
+            <p class="small text-light mb-0">
+                The stored file <code>{{ ev.stored_filename }}</code> could not be located in the storage vault directory.
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-4 mb-4">
+    <!-- Cryptographic Fingerprint Card -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header-cyber">
+                <h5><i class="bi bi-fingerprint text-cyan"></i> Cryptographic Signature (SHA-256)</h5>
+                <span class="badge bg-dark border border-secondary text-cyan font-monospace">256-bit Digest</span>
+            </div>
+            <div class="card-body p-4">
+                <div class="mb-3">
+                    <label class="form-label text-secondary small text-uppercase">Registered Hash Digest:</label>
+                    <div class="hash-container">
+                        <div class="hash-code">{{ ev.file_hash }}</div>
+                        <button class="btn btn-copy" onclick="copyToClipboard('{{ ev.file_hash }}', this)" title="Copy SHA-256 Hash">
+                            <i class="bi bi-clipboard me-1"></i> Copy
+                        </button>
+                    </div>
+                </div>
+                <p class="text-secondary small mb-0">
+                    <i class="bi bi-info-circle text-cyan me-1"></i>
+                    This SHA-256 hash was generated at the moment of intake. When you click <strong>Run Integrity Verification</strong>, the server reads the file on disk and computes a fresh SHA-256 digest to mathematically prove zero tampering.
+                </p>
+            </div>
+        </div>
+
+        <!-- Evidence Chain of Custody Table -->
+        <div class="card">
+            <div class="card-header-cyber">
+                <h5><i class="bi bi-link-45deg text-purple-neon"></i> Chain of Custody Audit Log</h5>
+                <span class="badge bg-dark border border-secondary text-info font-monospace">{{ custody|length }} Events</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table-cyber">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Investigator</th>
+                            <th>Action / Custody Operation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in custody %}
+                        <tr>
+                            <td class="font-monospace text-secondary small">{{ c.timestamp }}</td>
+                            <td>
+                                <span class="badge bg-dark border border-secondary text-light">
+                                    <i class="bi bi-person me-1"></i>{{ c.username }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if 'uploaded' in c.action|lower or 'registered' in c.action|lower %}
+                                    <span class="action-badge badge-upload"><i class="bi bi-cloud-arrow-up"></i> {{ c.action }}</span>
+                                {% elif 'intact' in c.action|lower %}
+                                    <span class="action-badge badge-verify text-success"><i class="bi bi-shield-check"></i> {{ c.action }}</span>
+                                {% elif 'tampered' in c.action|lower %}
+                                    <span class="action-badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-50"><i class="bi bi-shield-slash"></i> {{ c.action }}</span>
+                                {% elif 'downloaded' in c.action|lower %}
+                                    <span class="action-badge badge-download"><i class="bi bi-download"></i> {{ c.action }}</span>
+                                {% else %}
+                                    <span class="action-badge badge-view"><i class="bi bi-eye"></i> {{ c.action }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-muted">No custody events recorded.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metadata Attributes Sidebar Card -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header-cyber">
+                <h5><i class="bi bi-card-checklist text-cyan"></i> Evidence Metadata</h5>
+            </div>
+            <div class="p-3 text-secondary small">
+                <div class="mb-3 pb-2 border-bottom border-secondary border-opacity-10">
+                    <div class="text-muted small">Original Filename</div>
+                    <div class="fw-bold text-white">{{ ev.original_filename }}</div>
+                </div>
+
+                <div class="mb-3 pb-2 border-bottom border-secondary border-opacity-10">
+                    <div class="text-muted small">Vault Storage File</div>
+                    <div class="font-monospace text-secondary" style="font-size: 0.78rem; word-break: break-all;">
+                        {{ ev.stored_filename }}
+                    </div>
+                </div>
+
+                <div class="mb-3 pb-2 border-bottom border-secondary border-opacity-10">
+                    <div class="text-muted small">Artifact Size</div>
+                    <div class="fw-bold text-cyan">{{ ev.file_size_bytes|format_file_size }}</div>
+                </div>
+
+                <div class="mb-3 pb-2 border-bottom border-secondary border-opacity-10">
+                    <div class="text-muted small">Associated Docket</div>
+                    <div class="fw-bold text-white">{{ case.title if case else 'Unassigned' }}</div>
+                </div>
+
+                <div class="mb-3 pb-2 border-bottom border-secondary border-opacity-10">
+                    <div class="text-muted small">Uploading Investigator</div>
+                    <div class="fw-bold text-white">{{ ev.uploader }}</div>
+                </div>
+
+                <div class="mb-0">
+                    <div class="text-muted small">Registration Timestamp</div>
+                    <div class="font-monospace text-secondary">{{ ev.uploaded_at }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Help for Testing Tamper Detection -->
+        <div class="card">
+            <div class="card-header-cyber">
+                <h5><i class="bi bi-lightning-charge text-warning"></i> Viva Demo Instructions</h5>
+            </div>
+            <div class="card-body p-3 small text-secondary">
+                <p class="mb-2"><strong>To demonstrate evidence tampering:</strong></p>
+                <ol class="ps-3 mb-0 text-muted">
+                    <li class="mb-1">Click <strong>Run Integrity Verification</strong> above &rarr; Shows <span class="text-success fw-bold">Intact</span>.</li>
+                    <li class="mb-1">Open <code>evidence_files/{{ ev.stored_filename }}</code> and edit any byte.</li>
+                    <li>Click <strong>Run Integrity Verification</strong> again &rarr; Triggers the red <span class="text-danger fw-bold">Tamper Alert</span> showing the exact altered hash!</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
