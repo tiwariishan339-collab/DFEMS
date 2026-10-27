@@ -1,0 +1,7 @@
+venv/
+.venv/
+__paycache__
+/*.pyc
+env
+evidence_files/
+reports/
