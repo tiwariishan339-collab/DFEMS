@@ -33,9 +33,17 @@
             <i class="bi bi-shield-check"></i>
             <span>Run Integrity Verification</span>
         </a>
+        <a href="{{ url_for('tamper_evidence', evidence_id=ev.id) }}" class="btn btn-outline-danger d-inline-flex align-items-center gap-1" onclick="return confirm('Simulate adversary tampering on this file?');" title="Simulate hacker altering this file">
+            <i class="bi bi-radioactive"></i>
+            <span>Simulate Tamper</span>
+        </a>
+        <a href="{{ url_for('restore_evidence', evidence_id=ev.id) }}" class="btn btn-outline-success d-inline-flex align-items-center gap-1" title="Restore original file">
+            <i class="bi bi-arrow-counterclockwise"></i>
+            <span>Restore File</span>
+        </a>
         <a href="{{ url_for('download_evidence', evidence_id=ev.id) }}" class="btn btn-cyber-outline">
             <i class="bi bi-download"></i>
-            <span>Download Artifact</span>
+            <span>Download</span>
         </a>
         {% if case %}
         <a href="{{ url_for('case_detail', case_id=case.id) }}" class="btn btn-cyber-outline">
