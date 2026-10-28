@@ -15,6 +15,7 @@ from flask_login import (
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from pymongo import MongoClient
+from pymongo.errors import PyMongoError
 from bson.objectid import ObjectId
 from bson.errors import InvalidId
 
@@ -38,7 +39,7 @@ login_manager.init_app(app)
 login_manager.login_view = "login"
 
 # ---------- MongoDB connection ----------
-mongo_client = MongoClient(MONGO_URI)
+mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
 db = mongo_client[MONGO_DB_NAME]
 
 users_col = db.users
@@ -50,7 +51,14 @@ audit_col = db.audit_log
 
 def init_db():
     """Create indexes (safe to call every startup)."""
-    users_col.create_index("username", unique=True)
+    try:
+        users_col.create_index("username", unique=True)
+    except Exception as e:
+        print(f"[DFEMS] MongoDB initialization note: {e}")
+
+
+# Initialize indexes on app load
+init_db()
 
 
 def now_str():
@@ -458,6 +466,15 @@ def not_found(e):
     return render_template("error.html", code=404, message="The requested forensic record or page was not found."), 404
 
 
+@app.errorhandler(PyMongoError)
+def database_error(e):
+    return render_template(
+        "error.html",
+        code=500,
+        message="Database connection error. Please ensure your cloud MongoDB (MongoDB Atlas) connection string is set in Render environment variables (MONGO_URI)."
+    ), 500
+
+
 @app.errorhandler(500)
 def server_error(e):
     return render_template("error.html", code=500, message="An internal system exception occurred in the evidence engine."), 500
@@ -465,4 +482,5 @@ def server_error(e):
 
 if __name__ == "__main__":
     init_db()
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
