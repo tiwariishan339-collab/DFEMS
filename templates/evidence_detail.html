@@ -233,15 +233,24 @@
         <!-- Quick Help for Testing Tamper Detection -->
         <div class="card">
             <div class="card-header-cyber">
-                <h5><i class="bi bi-lightning-charge text-warning"></i> Viva Demo Instructions</h5>
+                <h5><i class="bi bi-lightning-charge text-warning"></i> Tamper Detection Demo</h5>
             </div>
             <div class="card-body p-3 small text-secondary">
-                <p class="mb-2"><strong>To demonstrate evidence tampering:</strong></p>
-                <ol class="ps-3 mb-0 text-muted">
-                    <li class="mb-1">Click <strong>Run Integrity Verification</strong> above &rarr; Shows <span class="text-success fw-bold">Intact</span>.</li>
-                    <li class="mb-1">Open <code>evidence_files/{{ ev.stored_filename }}</code> and edit any byte.</li>
-                    <li>Click <strong>Run Integrity Verification</strong> again &rarr; Triggers the red <span class="text-danger fw-bold">Tamper Alert</span> showing the exact altered hash!</li>
-                </ol>
+                <p class="mb-2"><strong>Demo on Cloud / Phone / Laptop:</strong></p>
+                <div class="d-grid gap-2 mb-3">
+                    <a href="{{ url_for('tamper_evidence', evidence_id=ev.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Simulate adversary tampering on this file?');">
+                        <i class="bi bi-radioactive me-1"></i> Simulate Adversary Tampering
+                    </a>
+                    <a href="{{ url_for('restore_evidence', evidence_id=ev.id) }}" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Restore Original File
+                    </a>
+                </div>
+                <p class="mb-1 text-muted" style="font-size: 0.8rem;">
+                    1. Click <strong>Run Integrity Verification</strong> &rarr; <span class="text-success fw-semibold">Intact</span>.<br>
+                    2. Click <strong>Simulate Adversary Tampering</strong> (or edit the file in <code>evidence_files/</code> on laptop).<br>
+                    3. Click <strong>Run Integrity Verification</strong> again &rarr; Triggers the red <span class="text-danger fw-semibold">Tamper Alert</span> showing altered hash!<br>
+                    4. Click <strong>Restore Original File</strong> to revert back.
+                </p>
             </div>
         </div>
     </div>

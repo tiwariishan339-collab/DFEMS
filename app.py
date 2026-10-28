@@ -373,6 +373,46 @@ def download_evidence(evidence_id):
     )
 
 
+# ---------- Viva Demonstration: Tamper Simulation & Restoration ----------
+@app.route("/evidence/<evidence_id>/tamper")
+@login_required
+def tamper_evidence(evidence_id):
+    oid = oid_or_404(evidence_id)
+    ev = evidence_col.find_one({"_id": oid})
+    if not ev:
+        abort(404)
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], ev["stored_filename"])
+    backup_path = filepath + ".original"
+    if os.path.exists(filepath):
+        import shutil
+        if not os.path.exists(backup_path):
+            shutil.copy2(filepath, backup_path)
+        with open(filepath, "ab") as f:
+            f.write(b"\n# [ADVERSARY TAMPER INJECTION - DEMO]")
+        log_custody(oid, current_user.username, "Adversary Tampering Simulated (File bitstream modified)")
+        log_audit(current_user.username, f"Simulated tamper on evidence '{ev['original_filename']}'")
+        flash("Demonstration: File was altered on the storage medium! Click 'Run Integrity Verification' to test tamper detection.", "warning")
+    return redirect(url_for("evidence_detail", evidence_id=evidence_id))
+
+
+@app.route("/evidence/<evidence_id>/restore")
+@login_required
+def restore_evidence(evidence_id):
+    oid = oid_or_404(evidence_id)
+    ev = evidence_col.find_one({"_id": oid})
+    if not ev:
+        abort(404)
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], ev["stored_filename"])
+    backup_path = filepath + ".original"
+    if os.path.exists(backup_path):
+        import shutil
+        shutil.copy2(backup_path, filepath)
+        log_custody(oid, current_user.username, "File restored to original cryptographic state")
+        log_audit(current_user.username, f"Restored evidence '{ev['original_filename']}' to baseline")
+        flash("File successfully restored to original baseline! Click 'Run Integrity Verification' to confirm integrity.", "success")
+    return redirect(url_for("evidence_detail", evidence_id=evidence_id))
+
+
 # ---------- Search ----------
 @app.route("/search")
 @login_required
