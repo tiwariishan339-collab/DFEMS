@@ -21,6 +21,8 @@ from bson.errors import InvalidId
 
 from utils import generate_file_hash, generate_report_pdf, format_file_size
 
+from db_adapter import get_database
+
 # ---------- Config ----------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "evidence_files")
@@ -38,9 +40,8 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
-# ---------- MongoDB connection ----------
-mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-db = mongo_client[MONGO_DB_NAME]
+# ---------- Database initialization (MongoDB with automatic SQLite fallback) ----------
+db, is_fallback_db = get_database(BASE_DIR, MONGO_URI, MONGO_DB_NAME)
 
 users_col = db.users
 cases_col = db.cases
